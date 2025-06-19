@@ -1,12 +1,11 @@
-// src/utils/encryption.js - Sistema de encriptación mejorado
+// src/utils/encryption.js - Sistema de encriptación final corregido
 const bcrypt = require("bcrypt")
 const crypto = require("crypto")
 
 const SALT_ROUNDS = 12
-const ALGORITHM = 'aes-256-gcm'
+const ALGORITHM = 'aes-256-cbc'
 const KEY_LENGTH = 32
 const IV_LENGTH = 16
-const TAG_LENGTH = 16
 
 // Derivar clave desde la clave maestra
 const deriveKey = (masterKey, salt = 'indiec-salt-2024') => {
@@ -22,7 +21,7 @@ const getEncryptionKey = () => {
   return deriveKey(masterKey)
 }
 
-// Funciones para passwords (sin cambios, ya están bien)
+// Funciones para passwords
 const hashPassword = async (password) => {
   return await bcrypt.hash(password, SALT_ROUNDS)
 }
@@ -31,23 +30,22 @@ const comparePassword = async (password, hash) => {
   return await bcrypt.compare(password, hash)
 }
 
-// Encriptación segura con AES-256-GCM
+// Encriptación segura con AES-256-CBC (API corregida)
 const encryptData = (text) => {
   if (!text || text === null || text === undefined) return null
   
   try {
     const key = getEncryptionKey()
     const iv = crypto.randomBytes(IV_LENGTH)
-    const cipher = crypto.createCipher(ALGORITHM, key)
-    cipher.setInitializationVector(iv)
+    
+    // Usar createCipheriv para especificar IV manualmente
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
     
     let encrypted = cipher.update(String(text), 'utf8', 'hex')
     encrypted += cipher.final('hex')
     
-    const tag = cipher.getAuthTag()
-    
-    // Combinar IV + tag + datos encriptados
-    return iv.toString('hex') + tag.toString('hex') + encrypted
+    // Combinar IV + datos encriptados con separador
+    return iv.toString('hex') + ':' + encrypted
   } catch (error) {
     console.error('Error al encriptar:', error)
     throw new Error('Error en encriptación')
@@ -61,14 +59,18 @@ const decryptData = (encryptedData) => {
   try {
     const key = getEncryptionKey()
     
-    // Extraer IV, tag y datos
-    const iv = Buffer.from(encryptedData.slice(0, IV_LENGTH * 2), 'hex')
-    const tag = Buffer.from(encryptedData.slice(IV_LENGTH * 2, (IV_LENGTH + TAG_LENGTH) * 2), 'hex')
-    const encrypted = encryptedData.slice((IV_LENGTH + TAG_LENGTH) * 2)
+    // Verificar formato
+    if (!encryptedData.includes(':')) {
+      throw new Error('Formato de datos encriptados inválido')
+    }
     
-    const decipher = crypto.createDecipher(ALGORITHM, key)
-    decipher.setInitializationVector(iv)
-    decipher.setAuthTag(tag)
+    // Separar IV y datos
+    const textParts = encryptedData.split(':')
+    const iv = Buffer.from(textParts.shift(), 'hex')
+    const encrypted = textParts.join(':')
+    
+    // Usar createDecipheriv para especificar IV manualmente
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
     
     let decrypted = decipher.update(encrypted, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
@@ -87,8 +89,13 @@ const encryptObject = (obj, fieldsToEncrypt = []) => {
   const encrypted = { ...obj }
   
   fieldsToEncrypt.forEach(field => {
-    if (encrypted[field]) {
-      encrypted[field] = encryptData(encrypted[field])
+    if (encrypted[field] && encrypted[field] !== null && encrypted[field] !== undefined) {
+      try {
+        encrypted[field] = encryptData(encrypted[field])
+      } catch (error) {
+        console.warn(`No se pudo encriptar el campo ${field}:`, error.message)
+        // Mantener el valor original si no se puede encriptar
+      }
     }
   })
   
@@ -102,7 +109,7 @@ const decryptObject = (obj, fieldsToDecrypt = []) => {
   const decrypted = { ...obj }
   
   fieldsToDecrypt.forEach(field => {
-    if (decrypted[field]) {
+    if (decrypted[field] && isEncrypted(decrypted[field])) {
       try {
         decrypted[field] = decryptData(decrypted[field])
       } catch (error) {
@@ -113,6 +120,14 @@ const decryptObject = (obj, fieldsToDecrypt = []) => {
   })
   
   return decrypted
+}
+
+// Verificar si un dato está encriptado
+const isEncrypted = (data) => {
+  if (!data || typeof data !== 'string') return false
+  
+  // Los datos encriptados tienen el formato: hexIV:hexData
+  return data.includes(':') && data.length > 32 && /^[a-f0-9]+:[a-f0-9]+$/i.test(data)
 }
 
 // Generar token seguro
@@ -130,6 +145,28 @@ const verifyIntegrity = (data, hash) => {
   return generateHash(data) === hash
 }
 
+// Función de prueba
+const testEncryption = () => {
+  try {
+    const testData = 'Texto de prueba para encriptación'
+    console.log('🧪 Probando encriptación...')
+    console.log('Original:', testData)
+    
+    const encrypted = encryptData(testData)
+    console.log('Encriptado:', encrypted)
+    
+    const decrypted = decryptData(encrypted)
+    console.log('Desencriptado:', decrypted)
+    
+    const success = testData === decrypted
+    console.log('✅ Prueba exitosa:', success)
+    return success
+  } catch (error) {
+    console.error('❌ Error en prueba de encriptación:', error)
+    return false
+  }
+}
+
 // Funciones legacy (mantener compatibilidad)
 const encrypt = encryptData
 const decrypt = decryptData
@@ -145,6 +182,8 @@ module.exports = {
   generateSecureToken,
   generateHash,
   verifyIntegrity,
+  isEncrypted,
+  testEncryption,
   
   // Compatibilidad hacia atrás
   encrypt,
