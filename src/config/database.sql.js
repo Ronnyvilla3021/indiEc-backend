@@ -1,8 +1,9 @@
 const { Sequelize } = require("sequelize")
 const logger = require("./logger")
+const config = require("../../key")
 
-const sequelize = new Sequelize(process.env.MYSQL_DATABASE, process.env.MYSQL_USER, process.env.MYSQL_PASSWORD, {
-  host: process.env.MYSQL_HOST,
+const sequelize = new Sequelize(config.MYSQL.DATABASE, config.MYSQL.USER, config.MYSQL.PASSWORD, {
+  host: config.MYSQL_HOST,
   dialect: "mysql",
   logging: (msg) => logger.info(msg),
   pool: {
@@ -24,7 +25,7 @@ const connectMySQL = async () => {
     await sequelize.authenticate()
     logger.info("Conexión a MySQL establecida correctamente")
 
-    if (process.env.NODE_ENV === "development") {
+    if (config.NODE_ENV === "development") {
       await sequelize.sync({ alter: true })
       logger.info("Modelos sincronizados con la base de datos")
     }

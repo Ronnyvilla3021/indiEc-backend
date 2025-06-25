@@ -1,9 +1,10 @@
 const mongoose = require("mongoose")
 const logger = require("./logger")
+const config = require("../../key")
 
 const connectMongoDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
+    await mongoose.connect(config.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     })

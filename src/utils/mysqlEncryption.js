@@ -1,6 +1,7 @@
 // src/utils/encryption.js - Sistema de encriptación final corregido
 const bcrypt = require("bcrypt")
 const crypto = require("crypto")
+const config = require("../../key")
 
 const SALT_ROUNDS = 12
 const ALGORITHM = 'aes-256-cbc'
@@ -14,7 +15,7 @@ const deriveKey = (masterKey, salt = 'indiec-salt-2024') => {
 
 // Obtener clave de encriptación
 const getEncryptionKey = () => {
-  const masterKey = process.env.ENCRYPTION_KEY
+  const masterKey = config.ENCRYPTION_KEY
   if (!masterKey || masterKey.length < 32) {
     throw new Error('ENCRYPTION_KEY debe tener al menos 32 caracteres')
   }

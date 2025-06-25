@@ -3,6 +3,7 @@ const { DataTypes } = require("sequelize")
 const { sequelize } = require("../../config/database.sql")
 const { encryptData, decryptData, generateHash } = require("../../utils/encryption")
 const logger = require("../../config/logger")
+const config = require("../../../key")
 
 const User = sequelize.define(
   "User",
@@ -63,7 +64,7 @@ const User = sequelize.define(
           logger.info('Hook beforeCreate ejecutándose...')
           
           // Verificar si el sistema de encriptación está habilitado
-          const encryptionEnabled = process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length >= 32
+          const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
           
           if (!encryptionEnabled) {
             logger.warn('Encriptación deshabilitada: ENCRYPTION_KEY no configurada correctamente')
@@ -122,7 +123,7 @@ const User = sequelize.define(
           logger.info(`Hook beforeUpdate ejecutándose para usuario ID: ${user.id}`)
           
           // Verificar si el sistema de encriptación está habilitado
-          const encryptionEnabled = process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length >= 32
+          const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
           
           if (!encryptionEnabled) {
             logger.warn('Encriptación deshabilitada: ENCRYPTION_KEY no configurada correctamente')
@@ -180,7 +181,7 @@ const User = sequelize.define(
         const decryptUser = (user) => {
           try {
             // Verificar si el sistema de encriptación está habilitado
-            const encryptionEnabled = process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length >= 32
+            const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
             
             if (!encryptionEnabled) {
               return // No desencriptar si no está habilitado
@@ -378,7 +379,7 @@ User.prototype.updateSensitiveData = async function(newData) {
 
 // Método para verificar si la encriptación está habilitada
 User.isEncryptionEnabled = function() {
-  return process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length >= 32
+  return config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
 }
 
 module.exports = User

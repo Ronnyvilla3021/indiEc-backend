@@ -7,6 +7,7 @@ const { hashPassword, comparePassword } = require("../utils/encryption")
 const { validate, schemas } = require("../middleware/validation")
 const { SecurityAuditor } = require("../utils/securityAudit")
 const logger = require("../config/logger")
+const config = require("../../key")
 
 const router = express.Router()
 
@@ -193,9 +194,9 @@ router.post("/login", validate(schemas.login), async (req, res) => {
         userId: user.id, 
         email: user.email // Ya desencriptado por hook
       }, 
-      process.env.JWT_SECRET, 
+      config.JWT_SECRET, 
       {
-        expiresIn: process.env.JWT_EXPIRES_IN,
+        expiresIn: config.JWT_EXPIRES_IN,
       }
     )
 
@@ -262,7 +263,7 @@ router.post("/verify-token", async (req, res) => {
       })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, config.JWT_SECRET)
     const user = await User.findByPk(decoded.userId)
 
     if (!user || !user.estado) {
@@ -381,7 +382,7 @@ router.post("/change-password", async (req, res) => {
       })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, config.JWT_SECRET)
     const user = await User.findByPk(decoded.userId)
 
     if (!user || !user.estado) {

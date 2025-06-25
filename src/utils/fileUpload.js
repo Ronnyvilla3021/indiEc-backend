@@ -1,6 +1,7 @@
 const multer = require("multer")
 const path = require("path")
 const crypto = require("crypto")
+const config = require("../../key")
 
 // Configuración de almacenamiento
 const storage = multer.diskStorage({
@@ -29,7 +30,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: Number.parseInt(process.env.MAX_FILE_SIZE) || 5242880, // 5MB por defecto
+    fileSize: Number.parseInt(config.MAX_FILE_SIZE) || 5242880, // 5MB por defecto
   },
   fileFilter: fileFilter,
 })

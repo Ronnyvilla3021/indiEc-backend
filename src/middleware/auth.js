@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken")
 const User = require("../models/sql/User")
 const logger = require("../config/logger")
+const config = require("../../key")
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -14,7 +15,7 @@ const authenticateToken = async (req, res, next) => {
       })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, config.JWT_SECRET)
     const user = await User.findByPk(decoded.userId)
 
     if (!user || !user.estado) {

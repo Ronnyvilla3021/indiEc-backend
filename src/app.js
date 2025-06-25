@@ -4,6 +4,7 @@ const helmet = require("helmet")
 const rateLimit = require("express-rate-limit")
 const path = require("path")
 require("dotenv").config()
+const config = require("../key")
 
 // Importar configuraciones
 const { connectMySQL } = require("./config/database.sql")
@@ -78,7 +79,7 @@ app.use("*", (req, res) => {
 // Middleware de manejo de errores
 app.use(errorHandler)
 
-const PORT = process.env.PORT || 3000
+const PORT = config.PORT || 3000
 
 // Inicializar conexiones y servidor
 async function startServer() {
