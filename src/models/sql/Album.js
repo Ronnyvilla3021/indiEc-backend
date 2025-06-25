@@ -37,6 +37,9 @@ const Album = sequelize.define(
         key: "id",
       },
     },
+
+
+    ///id , usuario_id, estado, valor, detalle de compra 
   },
   {
     tableName: "albums",
