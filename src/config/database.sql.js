@@ -3,7 +3,7 @@ const logger = require("./logger")
 const config = require("../../key")
 
 const sequelize = new Sequelize(config.MYSQL.DATABASE, config.MYSQL.USER, config.MYSQL.PASSWORD, {
-  host: config.MYSQL_HOST,
+  host: config.MYSQL.HOST,
   dialect: "mysql",
   logging: (msg) => logger.info(msg),
   pool: {

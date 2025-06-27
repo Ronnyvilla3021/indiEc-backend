@@ -1,13 +1,13 @@
 const config = {
     PORT: 3000,
-    NODE_ENV: 'development',
+    NODE_ENV: 'production',
 
     // MySQL
     MYSQL: {
-        HOST: 'localhost',
-        USER: 'root',
-        PASSWORD: '',
-        DATABASE: 'indiec_db'
+        HOST: '31.37.42.126',
+        USER: 'linkear',
+        PASSWORD: '0987021692@Rj',
+        DATABASE: 'indiec'
     },
 
     // MongoDB

@@ -15,7 +15,7 @@ const authenticateToken = async (req, res, next) => {
       })
     }
 
-    const decoded = jwt.verify(token, config.JWT_SECRET)
+    const decoded = jwt.verify(token, config.JWT.SECRET)
     const user = await User.findByPk(decoded.userId)
 
     if (!user || !user.estado) {

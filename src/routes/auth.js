@@ -194,9 +194,9 @@ router.post("/login", validate(schemas.login), async (req, res) => {
         userId: user.id, 
         email: user.email // Ya desencriptado por hook
       }, 
-      config.JWT_SECRET, 
+      config.JWT.SECRET, 
       {
-        expiresIn: config.JWT_EXPIRES_IN,
+        expiresIn: config.JWT.EXPIRES_IN,
       }
     )
 
@@ -263,7 +263,7 @@ router.post("/verify-token", async (req, res) => {
       })
     }
 
-    const decoded = jwt.verify(token, config.JWT_SECRET)
+    const decoded = jwt.verify(token, config.JWT.SECRET)
     const user = await User.findByPk(decoded.userId)
 
     if (!user || !user.estado) {
@@ -382,7 +382,7 @@ router.post("/change-password", async (req, res) => {
       })
     }
 
-    const decoded = jwt.verify(token, config.JWT_SECRET)
+    const decoded = jwt.verify(token, config.JWT.SECRET)
     const user = await User.findByPk(decoded.userId)
 
     if (!user || !user.estado) {
