@@ -1,385 +1,200 @@
-// src/models/sql/User.js - Modelo User corregido con manejo de errores
-const { DataTypes } = require("sequelize")
-const { sequelize } = require("../../config/database.sql")
-const { encryptData, decryptData, generateHash } = require("../../utils/encryption")
-const logger = require("../../config/logger")
-const config = require("../../../key")
+// src/models/sql/UsuarioNuevo.js
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../../config/database.sql");
+const { encryptData, decryptData, generateHash } = require("../../utils/encryption");
+const logger = require("../../config/logger");
+const config = require("../../../key");
 
-const User = sequelize.define(
-  "User",
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    email: {
-      type: DataTypes.TEXT, // TEXT para datos encriptados
-      allowNull: false,
-    },
-    email_hash: {
-      type: DataTypes.STRING(64), // Hash para búsquedas
-      allowNull: true, // Temporal: cambiar a false después de migración
-    },
-    password_hash: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    nombres: {
-      type: DataTypes.TEXT, // TEXT para datos encriptados
-      allowNull: false,
-    },
-    apellidos: {
-      type: DataTypes.TEXT, // TEXT para datos encriptados
-      allowNull: false,
-    },
-    nombres_hash: {
-      type: DataTypes.STRING(64), // Hash para búsquedas
-      allowNull: true, // Temporal: cambiar a false después de migración
-    },
-    apellidos_hash: {
-      type: DataTypes.STRING(64), // Hash para búsquedas
-      allowNull: true, // Temporal: cambiar a false después de migración
-    },
-    genero: {
-      type: DataTypes.ENUM("Masculino", "Femenino", "Otro"),
-      allowNull: false,
-    },
-    fecha: {
-      type: DataTypes.DATEONLY,
-      allowNull: false,
-    },
-    estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
+const UsuarioNuevo = sequelize.define("UsuarioNuevo", {
+  id_usuario: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  nombre: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+  },
+  apellido: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+  },
+  correo: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    unique: true,
+  },
+  contraseña: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+  },
+  telefono: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
+  fecha_nacimiento: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
+  estado_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'estados',
+      key: 'id'
     }
   },
-  {
-    tableName: "users",
-    timestamps: true,
-    hooks: {
-      // ANTES DE CREAR
-      beforeCreate: async (user) => {
-        try {
-          logger.info('Hook beforeCreate ejecutándose...')
-          
-          // Verificar si el sistema de encriptación está habilitado
-          const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
-          
-          if (!encryptionEnabled) {
-            logger.warn('Encriptación deshabilitada: ENCRYPTION_KEY no configurada correctamente')
-            return
-          }
-          
-          // Encriptar email
-          if (user.email) {
-            try {
-              const originalEmail = user.email
-              user.email_hash = generateHash(originalEmail.toLowerCase())
-              user.email = encryptData(originalEmail)
-              logger.info(`Email encriptado para usuario: ${user.email_hash}`)
-            } catch (error) {
-              logger.error('Error encriptando email:', error)
-              throw new Error('Error procesando email')
-            }
-          }
-          
-          // Encriptar nombres
-          if (user.nombres) {
-            try {
-              const originalNombres = user.nombres
-              user.nombres_hash = generateHash(originalNombres.toLowerCase())
-              user.nombres = encryptData(originalNombres)
-              logger.info('Nombres encriptados')
-            } catch (error) {
-              logger.error('Error encriptando nombres:', error)
-              throw new Error('Error procesando nombres')
-            }
-          }
-          
-          // Encriptar apellidos
-          if (user.apellidos) {
-            try {
-              const originalApellidos = user.apellidos
-              user.apellidos_hash = generateHash(originalApellidos.toLowerCase())
-              user.apellidos = encryptData(originalApellidos)
-              logger.info('Apellidos encriptados')
-            } catch (error) {
-              logger.error('Error encriptando apellidos:', error)
-              throw new Error('Error procesando apellidos')
-            }
-          }
-          
-          logger.info('Hook beforeCreate completado exitosamente')
-        } catch (error) {
-          logger.error('Error en hook beforeCreate:', error)
-          throw error
+  rol_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'roles',
+      key: 'id'
+    }
+  },
+  sexo_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'sexos',
+      key: 'id'
+    }
+  },
+  pais_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'paises',
+      key: 'id'
+    }
+  },
+  fecha_ultimo_acceso: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  verificado_email: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  verificado_telefono: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  }
+}, {
+  tableName: "usuarios",
+  timestamps: true,
+  hooks: {
+    // ANTES DE CREAR
+    beforeCreate: async (usuario) => {
+      try {
+        logger.info('Hook beforeCreate ejecutándose...');
+
+        // Verificar si el sistema de encriptación está habilitado
+        const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32;
+
+        if (!encryptionEnabled) {
+          logger.warn('Encriptación deshabilitada: ENCRYPTION_KEY no configurada correctamente');
+          return;
         }
-      },
-      
-      // ANTES DE ACTUALIZAR
-      beforeUpdate: async (user) => {
-        try {
-          logger.info(`Hook beforeUpdate ejecutándose para usuario ID: ${user.id}`)
-          
-          // Verificar si el sistema de encriptación está habilitado
-          const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
-          
-          if (!encryptionEnabled) {
-            logger.warn('Encriptación deshabilitada: ENCRYPTION_KEY no configurada correctamente')
-            return
-          }
-          
-          // Solo encriptar si el campo cambió
-          if (user.changed('email')) {
-            try {
-              const originalEmail = user.email
-              user.email_hash = generateHash(originalEmail.toLowerCase())
-              user.email = encryptData(originalEmail)
-              logger.info(`Email actualizado y encriptado para usuario ID: ${user.id}`)
-            } catch (error) {
-              logger.error('Error encriptando email en update:', error)
-              throw new Error('Error procesando email en actualización')
-            }
-          }
-          
-          if (user.changed('nombres')) {
-            try {
-              const originalNombres = user.nombres
-              user.nombres_hash = generateHash(originalNombres.toLowerCase())
-              user.nombres = encryptData(originalNombres)
-              logger.info(`Nombres actualizados para usuario ID: ${user.id}`)
-            } catch (error) {
-              logger.error('Error encriptando nombres en update:', error)
-              throw new Error('Error procesando nombres en actualización')
-            }
-          }
-          
-          if (user.changed('apellidos')) {
-            try {
-              const originalApellidos = user.apellidos
-              user.apellidos_hash = generateHash(originalApellidos.toLowerCase())
-              user.apellidos = encryptData(originalApellidos)
-              logger.info(`Apellidos actualizados para usuario ID: ${user.id}`)
-            } catch (error) {
-              logger.error('Error encriptando apellidos en update:', error)
-              throw new Error('Error procesando apellidos en actualización')
-            }
-          }
-          
-          logger.info('Hook beforeUpdate completado exitosamente')
-        } catch (error) {
-          logger.error('Error en hook beforeUpdate:', error)
-          throw error
-        }
-      },
-      
-      // DESPUÉS DE BUSCAR (desencriptar para uso)
-      afterFind: (users) => {
-        if (!users) return
-        
-        const decryptUser = (user) => {
+
+        // Encriptar correo
+        if (usuario.correo) {
           try {
-            // Verificar si el sistema de encriptación está habilitado
-            const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
-            
-            if (!encryptionEnabled) {
-              return // No desencriptar si no está habilitado
-            }
-            
-            // Solo desencriptar si parece estar encriptado (contiene ':')
-            if (user.email && typeof user.email === 'string' && user.email.includes(':')) {
-              try {
-                user.email = decryptData(user.email)
-              } catch (error) {
-                logger.warn(`Error desencriptando email del usuario ${user.id}:`, error.message)
-              }
-            }
-            
-            if (user.nombres && typeof user.nombres === 'string' && user.nombres.includes(':')) {
-              try {
-                user.nombres = decryptData(user.nombres)
-              } catch (error) {
-                logger.warn(`Error desencriptando nombres del usuario ${user.id}:`, error.message)
-              }
-            }
-            
-            if (user.apellidos && typeof user.apellidos === 'string' && user.apellidos.includes(':')) {
-              try {
-                user.apellidos = decryptData(user.apellidos)
-              } catch (error) {
-                logger.warn(`Error desencriptando apellidos del usuario ${user.id}:`, error.message)
-              }
-            }
+            const originalCorreo = usuario.correo;
+            usuario.correo = encryptData(originalCorreo);
+            logger.info(`Correo encriptado para usuario: ${originalCorreo}`);
           } catch (error) {
-            logger.warn(`Error general desencriptando usuario ${user.id}:`, error.message)
+            logger.error('Error encriptando correo:', error);
+            throw new Error('Error procesando correo');
           }
         }
-        
-        try {
-          if (Array.isArray(users)) {
-            users.forEach(decryptUser)
-          } else {
-            decryptUser(users)
-          }
-        } catch (error) {
-          logger.error('Error en hook afterFind:', error)
-        }
+
+        logger.info('Hook beforeCreate completado exitosamente');
+      } catch (error) {
+        logger.error('Error en hook beforeCreate:', error);
+        throw error;
       }
     },
-    indexes: [
-      {
-        fields: ['email_hash'],
-        name: 'idx_email_hash'
-      },
-      {
-        fields: ['nombres_hash'],
-        name: 'idx_nombres_hash'
-      },
-      {
-        fields: ['apellidos_hash'],
-        name: 'idx_apellidos_hash'
-      },
-      {
-        fields: ['estado'],
-        name: 'idx_estado'
+
+    // ANTES DE ACTUALIZAR
+    beforeUpdate: async (usuario) => {
+      try {
+        logger.info(`Hook beforeUpdate ejecutándose para usuario ID: ${usuario.id_usuario}`);
+
+        // Verificar si el sistema de encriptación está habilitado
+        const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32;
+
+        if (!encryptionEnabled) {
+          logger.warn('Encriptación deshabilitada: ENCRYPTION_KEY no configurada correctamente');
+          return;
+        }
+
+        // Solo encriptar si el campo cambió
+        if (usuario.changed('correo')) {
+          try {
+            const originalCorreo = usuario.correo;
+            usuario.correo = encryptData(originalCorreo);
+            logger.info(`Correo actualizado y encriptado para usuario ID: ${usuario.id_usuario}`);
+          } catch (error) {
+            logger.error('Error encriptando correo en update:', error);
+            throw new Error('Error procesando correo en actualización');
+          }
+        }
+
+        logger.info('Hook beforeUpdate completado exitosamente');
+      } catch (error) {
+        logger.error('Error en hook beforeUpdate:', error);
+        throw error;
       }
-    ]
-  }
-)
+    },
 
-// Método estático para búsqueda por email encriptado
-User.findByEmail = async function(email) {
-  try {
-    const emailHash = generateHash(email.toLowerCase())
-    
-    // Primero intentar buscar por hash (más eficiente)
-    let user = await this.findOne({ 
-      where: { email_hash: emailHash, estado: true }
-    })
-    
-    // Si no se encuentra por hash, buscar por email directo (para usuarios no migrados)
-    if (!user) {
-      user = await this.findOne({
-        where: { email: email, estado: true }
-      })
-    }
-    
-    return user
-  } catch (error) {
-    logger.error('Error en findByEmail:', error)
-    return null
-  }
-}
+    // DESPUÉS DE BUSCAR (desencriptar para uso)
+    afterFind: (usuarios) => {
+      if (!usuarios) return;
 
-// Método estático para búsqueda por nombres (usando hashes)
-User.searchByName = async function(searchTerm, options = {}) {
-  const { Op } = require('sequelize')
-  
-  try {
-    const searchHash = generateHash(searchTerm.toLowerCase())
-    
-    return await this.findAll({
-      where: {
-        [Op.and]: [
-          {
-            [Op.or]: [
-              { nombres_hash: searchHash },
-              { apellidos_hash: searchHash }
-            ]
-          },
-          { estado: true }
-        ]
-      },
-      ...options
-    })
-  } catch (error) {
-    logger.error('Error en búsqueda por nombre:', error)
-    return []
-  }
-}
+      const decryptUsuario = (usuario) => {
+        try {
+          // Verificar si el sistema de encriptación está habilitado
+          const encryptionEnabled = config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32;
 
-// Método estático para búsqueda avanzada
-User.searchByNameAdvanced = async function(searchTerm, options = {}) {
-  try {
-    const allUsers = await this.findAll({
-      where: { estado: true },
-      ...options
-    })
-    
-    const filtered = allUsers.filter(user => {
-      const fullName = `${user.nombres} ${user.apellidos}`.toLowerCase()
-      return fullName.includes(searchTerm.toLowerCase())
-    })
-    
-    return filtered
-  } catch (error) {
-    logger.error('Error en búsqueda avanzada:', error)
-    return []
-  }
-}
+          if (!encryptionEnabled) {
+            return; // No desencriptar si no está habilitado
+          }
 
-// Función para obtener nombre completo
-User.prototype.getFullName = function() {
-  return `${this.nombres || ''} ${this.apellidos || ''}`.trim()
-}
+          // Solo desencriptar si parece estar encriptado (contiene ':')
+          if (usuario.correo && typeof usuario.correo === 'string' && usuario.correo.includes(':')) {
+            try {
+              usuario.correo = decryptData(usuario.correo);
+            } catch (error) {
+              logger.warn(`Error desencriptando correo del usuario ${usuario.id_usuario}:`, error.message);
+            }
+          }
+        } catch (error) {
+          logger.warn(`Error general desencriptando usuario ${usuario.id_usuario}:`, error.message);
+        }
+      };
 
-// Función para obtener datos públicos (sin información sensible)
-User.prototype.getPublicData = function() {
-  return {
-    id: this.id,
-    nombres_inicial: this.nombres ? this.nombres.charAt(0).toUpperCase() : '',
-    apellidos_inicial: this.apellidos ? this.apellidos.charAt(0).toUpperCase() : '',
-    genero: this.genero,
-    created_at: this.created_at
-  }
-}
-
-// Función para obtener datos seguros (con algunos datos desencriptados)
-User.prototype.getSafeData = function() {
-  return {
-    id: this.id,
-    email: this.email, // Ya desencriptado por hook
-    nombres: this.nombres, // Ya desencriptado por hook
-    apellidos: this.apellidos, // Ya desencriptado por hook
-    genero: this.genero,
-    fecha: this.fecha,
-    estado: this.estado,
-    created_at: this.created_at,
-    updated_at: this.updated_at
-  }
-}
-
-// Método para actualizar datos sensibles de forma segura
-User.prototype.updateSensitiveData = async function(newData) {
-  try {
-    const allowedFields = ['email', 'nombres', 'apellidos', 'genero', 'fecha']
-    const updateData = {}
-    
-    // Solo incluir campos permitidos
-    allowedFields.forEach(field => {
-      if (newData[field] !== undefined) {
-        updateData[field] = newData[field]
+      try {
+        if (Array.isArray(usuarios)) {
+          usuarios.forEach(decryptUsuario);
+        } else {
+          decryptUsuario(usuarios);
+        }
+      } catch (error) {
+        logger.error('Error en hook afterFind:', error);
       }
-    })
-    
-    if (Object.keys(updateData).length === 0) {
-      throw new Error('No hay datos válidos para actualizar')
     }
-    
-    // La encriptación ocurre automáticamente en el hook beforeUpdate
-    await this.update(updateData)
-    
-    return this
-  } catch (error) {
-    logger.error('Error actualizando datos sensibles:', error)
-    throw error
-  }
-}
+  },
+  indexes: [
+    {
+      fields: ['correo'],
+      name: 'idx_correo'
+    },
+    {
+      fields: ['estado_id', 'rol_id'],
+      name: 'idx_estado_rol'
+    }
+  ]
+});
 
-// Método para verificar si la encriptación está habilitada
-User.isEncryptionEnabled = function() {
-  return config.ENCRYPTION_KEY && config.ENCRYPTION_KEY.length >= 32
-}
-
-module.exports = User
+module.exports = UsuarioNuevo;
