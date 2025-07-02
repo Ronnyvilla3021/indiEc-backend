@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize")
 const { sequelize } = require("../../config/database.sql")
-const User = require("./UsuarioNuevo")
 
 const Event = sequelize.define(
   "Event",
@@ -36,19 +35,30 @@ const Event = sequelize.define(
     },
     user_id: {
       type: DataTypes.INTEGER,
+      allowNull: true,
       references: {
-        model: User,
-        key: "id",
+        model: 'usuarios',
+        key: 'id_usuario'
       },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
     },
   },
   {
     tableName: "events",
     timestamps: true,
+    indexes: [
+      {
+        fields: ['user_id']
+      },
+      {
+        fields: ['fecha']
+      },
+      {
+        fields: ['genero_musical']
+      }
+    ]
   },
 )
-
-Event.belongsTo(User, { foreignKey: "user_id", as: "user" })
-User.hasMany(Event, { foreignKey: "user_id", as: "events" })
 
 module.exports = Event

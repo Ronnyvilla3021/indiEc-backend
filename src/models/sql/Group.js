@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize")
 const { sequelize } = require("../../config/database.sql")
-const User = require("./UsuarioNuevo")
 
 const Group = sequelize.define(
   "Group",
@@ -24,19 +23,30 @@ const Group = sequelize.define(
     },
     user_id: {
       type: DataTypes.INTEGER,
+      allowNull: true,
       references: {
-        model: User,
-        key: "id",
+        model: 'usuarios',
+        key: 'id_usuario'
       },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
     },
   },
   {
     tableName: "groups",
     timestamps: true,
+    indexes: [
+      {
+        fields: ['user_id']
+      },
+      {
+        fields: ['genero_musical']
+      },
+      {
+        fields: ['nombre_grupo']
+      }
+    ]
   },
 )
-
-Group.belongsTo(User, { foreignKey: "user_id", as: "user" })
-User.hasMany(Group, { foreignKey: "user_id", as: "groups" })
 
 module.exports = Group

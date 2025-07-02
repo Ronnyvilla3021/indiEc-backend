@@ -1,5 +1,5 @@
 // ================================
-// APP.JS ACTUALIZADO CON SISTEMA HÍBRIDO
+// APP.JS ACTUALIZADO CON SINCRONIZACIÓN AUTOMÁTICA
 // ================================
 
 const express = require("express")
@@ -11,7 +11,7 @@ require("dotenv").config()
 const config = require("../key")
 
 // Importar configuraciones
-const { connectMySQL } = require("./config/database.sql")
+const { connectMySQL, checkTablesExist } = require("./config/database.sql")
 const { connectMongoDB } = require("./config/database.orm")
 const logger = require("./config/logger")
 
@@ -71,24 +71,43 @@ app.use("/api/events", eventRoutes)
 // ================================
 // RUTAS HÍBRIDAS (Nuevo sistema)
 // ================================
-app.use("/api/", rutasHibridas)
+app.use("/api/v2", rutasHibridas)
 
 // ================================
 // RUTAS DE INFORMACIÓN Y PRUEBAS
 // ================================
 
 // Ruta de prueba general
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "INDIEC API funcionando correctamente",
-    version: "1.0.0",
-    timestamp: new Date().toISOString(),
-    sistemas: {
-      original: "Activo",
-      hibrido: "Activo"
-    }
-  })
+app.get("/api/health", async (req, res) => {
+  try {
+    const tableCount = await checkTablesExist()
+    
+    res.json({
+      success: true,
+      message: "INDIEC API funcionando correctamente",
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
+      database: {
+        mysql: {
+          connected: true,
+          tables: tableCount
+        },
+        mongodb: {
+          connected: true
+        }
+      },
+      sistemas: {
+        original: "Activo",
+        hibrido: "Activo"
+      }
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error en la API",
+      error: error.message
+    })
+  }
 })
 
 // Ruta de información de la API
@@ -126,114 +145,6 @@ app.get("/api/info", (req, res) => {
   })
 })
 
-// Ruta de documentación básica
-app.get("/api/docs", (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      titulo: "Documentación INDIEC API",
-      sistemas: {
-        original: {
-          descripcion: "Sistema original mantenido para compatibilidad",
-          endpoints: [
-            "POST /api/auth/register - Registro de usuario",
-            "POST /api/auth/login - Login de usuario",
-            "GET /api/users/profile - Perfil de usuario",
-            "GET /api/music - Listar música",
-            "GET /api/albums - Listar álbumes",
-            "GET /api/groups - Listar grupos",
-            "GET /api/events - Listar eventos"
-          ]
-        },
-        hibrido: {
-          descripcion: "Sistema híbrido nuevo con mejores capacidades",
-          endpoints: [
-            "POST /api/v2/usuarios-hibridos - Crear usuario híbrido",
-            "GET /api/v2/usuarios-hibridos/perfil - Perfil completo",
-            "POST /api/v2/artistas-hibridos - Crear artista",
-            "GET /api/v2/artistas-hibridos - Listar artistas",
-            "POST /api/v2/ventas-hibridas - Procesar venta",
-            "GET /api/v2/ventas-hibridas/mis-ventas - Mis ventas",
-            "POST /api/v2/eventos-hibridos - Crear evento",
-            "GET /api/v2/eventos-hibridos - Listar eventos",
-            "POST /api/v2/analytics-hibridos/metrica - Registrar métrica",
-            "GET /api/v2/catalogos/estados - Catálogo de estados",
-            "GET /api/v2/catalogos/roles - Catálogo de roles",
-            "GET /api/v2/catalogos/generos-musicales - Géneros musicales",
-            "GET /api/v2/catalogos/paises - Países",
-            "GET /api/v2/catalogos/sexos - Sexos"
-          ]
-        }
-      },
-      ejemplos: {
-        crear_usuario_hibrido: {
-          url: "POST /api/v2/usuarios-hibridos",
-          body: {
-            nombre: "Juan",
-            apellido: "Pérez",
-            correo: "juan@ejemplo.com",
-            contraseña: "123456",
-            telefono: "+57300123456",
-            sexo_id: 1,
-            pais_id: 1,
-            profesion: "Músico",
-            redes_sociales: {
-              instagram: "@juanmusico",
-              youtube: "JuanMusicoOficial"
-            },
-            temas_favoritos: ["Rock", "Jazz"]
-          }
-        },
-        crear_artista: {
-          url: "POST /api/v2/artistas-hibridos",
-          body: {
-            nombre: "Juan Pérez",
-            nombre_artistico: "Juan Music",
-            genero_principal_id: 1,
-            pais_id: 1,
-            biografia: "Artista emergente de rock alternativo",
-            redes_sociales: {
-              spotify: "https://open.spotify.com/artist/...",
-              instagram: "@juanmusic"
-            },
-            influencias_musicales: ["The Beatles", "Radiohead"],
-            instrumentos: [
-              { nombre: "Guitarra", nivel: "Avanzado" },
-              { nombre: "Piano", nivel: "Intermedio" }
-            ]
-          }
-        },
-        crear_venta: {
-          url: "POST /api/v2/ventas-hibridas",
-          body: {
-            productos: [
-              {
-                id: 1,
-                tipo: "Album",
-                cantidad: 1,
-                precio: 15.99
-              },
-              {
-                id: 5,
-                tipo: "Cancion",
-                cantidad: 3,
-                precio: 1.99
-              }
-            ],
-            metodo_pago: "tarjeta_credito",
-            descuentos: 2.00,
-            porcentaje_impuestos: 19,
-            metadata: {
-              plataforma: "web",
-              promocion: "descuento_estudiante"
-            }
-          }
-        }
-      }
-    }
-  })
-})
-
 // Middleware para rutas no encontradas
 app.use("*", (req, res) => {
   res.status(404).json({
@@ -262,52 +173,93 @@ const PORT = config.PORT || 3000
 async function startServer() {
   try {
     logger.info("🚀 Iniciando servidor INDIEC...")
+    printStartupBanner()
 
-    // Conectar a las bases de datos
+    // 1. Crear directorio de uploads si no existe
+    await createUploadsDirectory()
+
+    // 2. Conectar a las bases de datos (con sincronización automática)
     logger.info("📡 Conectando a bases de datos...")
-    await connectMySQL()
+    await connectMySQL() // Esto ya incluye la sincronización
     await connectMongoDB()
 
-    // Sincronizar modelos (solo en desarrollo)
-    if (config.NODE_ENV === "development") {
-      logger.info("🔄 Sincronizando modelos...")
-      const { sequelize } = require("./config/database.sql")
-      await sequelize.sync({ alter: true })
-      logger.info("✅ Modelos sincronizados")
-    }
-
-    // Crear datos iniciales si no existen
+    // 3. Crear datos iniciales si no existen
     await crearDatosIniciales()
 
-    // Crear directorio de uploads si no existe
-    const fs = require("fs")
-    const uploadDir = path.join(__dirname, "../uploads")
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-      logger.info("📁 Directorio uploads creado")
-    }
+    // 4. Verificar que todo esté funcionando
+    await verificarSistema()
 
-    // Iniciar servidor
+    // 5. Iniciar servidor
     app.listen(PORT, () => {
       logger.info(`🎵 INDIEC API iniciado en puerto ${PORT}`)
       logger.info(`🌐 Sistema original: http://localhost:${PORT}/api`)
       logger.info(`🚀 Sistema híbrido: http://localhost:${PORT}/api/v2`)
       logger.info(`📚 Documentación: http://localhost:${PORT}/api/docs`)
       
-      console.log(`\n🎵 ================================`)
-      console.log(`🎵 INDIEC API - Sistema Híbrido`)
-      console.log(`🎵 ================================`)
-      console.log(`🌐 URL: http://localhost:${PORT}`)
-      console.log(`📊 Estado: Funcionando`)
-      console.log(`💾 MySQL: Conectado`)
-      console.log(`🍃 MongoDB: Conectado`)
-      console.log(`🔧 Modo: ${config.NODE_ENV}`)
-      console.log(`🎵 ================================\n`)
+      printSuccessBanner()
     })
   } catch (error) {
     logger.error("❌ Error al iniciar el servidor:", error)
     console.error("❌ Error crítico:", error)
     process.exit(1)
+  }
+}
+
+// ================================
+// FUNCIONES AUXILIARES
+// ================================
+
+function printStartupBanner() {
+  console.log(`\n🎵 ================================`)
+  console.log(`🎵 INDIEC API - Sistema Híbrido`)
+  console.log(`🎵 Iniciando servicios...`)
+  console.log(`🎵 ================================\n`)
+}
+
+function printSuccessBanner() {
+  console.log(`\n🎵 ================================`)
+  console.log(`🎵 INDIEC API - Sistema Híbrido`)
+  console.log(`🎵 ================================`)
+  console.log(`🌐 URL: http://localhost:${PORT}`)
+  console.log(`📊 Estado: Funcionando`)
+  console.log(`💾 MySQL: Conectado y Sincronizado`)
+  console.log(`🍃 MongoDB: Conectado`)
+  console.log(`🔧 Modo: ${config.NODE_ENV}`)
+  console.log(`🎵 ================================\n`)
+}
+
+async function createUploadsDirectory() {
+  try {
+    const fs = require("fs")
+    const uploadDir = path.join(__dirname, "../uploads")
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+      logger.info("📁 Directorio uploads creado")
+    } else {
+      logger.info("📁 Directorio uploads verificado")
+    }
+  } catch (error) {
+    logger.error("Error al crear directorio uploads:", error)
+    throw error
+  }
+}
+
+async function verificarSistema() {
+  try {
+    logger.info("🔍 Verificando integridad del sistema...")
+    
+    // Verificar que las tablas se crearon
+    const tableCount = await checkTablesExist()
+    logger.info(`📊 Base de datos contiene ${tableCount} tablas`)
+    
+    if (tableCount === 0) {
+      logger.warn("⚠️  No se encontraron tablas en la base de datos")
+    }
+    
+    logger.info("✅ Sistema verificado correctamente")
+  } catch (error) {
+    logger.error("Error en verificación del sistema:", error)
+    throw error
   }
 }
 

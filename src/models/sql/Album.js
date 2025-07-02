@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize")
 const { sequelize } = require("../../config/database.sql")
-const User = require("./UsuarioNuevo")
 
 const Album = sequelize.define(
   "Album",
@@ -32,22 +31,30 @@ const Album = sequelize.define(
     },
     user_id: {
       type: DataTypes.INTEGER,
+      allowNull: true,
       references: {
-        model: User,
-        key: "id",
+        model: 'usuarios',
+        key: 'id_usuario'
       },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
     },
-
-
-    ///id , usuario_id, estado, valor, detalle de compra 
   },
   {
     tableName: "albums",
     timestamps: true,
+    indexes: [
+      {
+        fields: ['user_id']
+      },
+      {
+        fields: ['genero', 'año']
+      },
+      {
+        fields: ['titulo']
+      }
+    ]
   },
 )
-
-Album.belongsTo(User, { foreignKey: "user_id", as: "user" })
-User.hasMany(Album, { foreignKey: "user_id", as: "albums" })
 
 module.exports = Album
