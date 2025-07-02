@@ -141,3 +141,5 @@ class VentaController {
     }
   };
 }
+
+module.exports = VentaController;

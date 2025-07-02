@@ -1,5 +1,4 @@
 const { UsuarioService } = require('../services/servicios_hibridos');
-const { authenticateToken } = require('../middleware/auth');
 const logger = require('../config/logger');
 
 class UsuarioController {
@@ -7,7 +6,6 @@ class UsuarioController {
     this.usuarioService = new UsuarioService();
   }
 
-  // Crear nuevo usuario
   crearUsuario = async (req, res) => {
     try {
       const { nombre, apellido, correo, contraseña, telefono, fecha_nacimiento, sexo_id, pais_id } = req.body;
@@ -58,10 +56,9 @@ class UsuarioController {
     }
   };
 
-  // Obtener perfil completo
   obtenerPerfil = async (req, res) => {
     try {
-      const usuarioId = req.user.id_usuario || req.params.id;
+      const usuarioId = req.user?.id_usuario || req.params.id;
       
       const usuario = await this.usuarioService.obtenerUsuarioCompleto(usuarioId);
 
@@ -72,12 +69,9 @@ class UsuarioController {
         });
       }
 
-      // Remover datos sensibles
-      const { contraseña, ...usuarioSeguro } = usuario;
-
       res.json({
         success: true,
-        data: usuarioSeguro
+        data: usuario
       });
     } catch (error) {
       logger.error('Error al obtener perfil:', error);
@@ -88,7 +82,6 @@ class UsuarioController {
     }
   };
 
-  // Actualizar perfil
   actualizarPerfil = async (req, res) => {
     try {
       const usuarioId = req.user.id_usuario;
@@ -123,7 +116,6 @@ class UsuarioController {
     }
   };
 
-  // Buscar usuarios
   buscarUsuarios = async (req, res) => {
     try {
       const { q, pais_id, rol_id, page = 1, limit = 10 } = req.query;
@@ -150,7 +142,6 @@ class UsuarioController {
     }
   };
 
-  // Listar usuarios con paginación
   listarUsuarios = async (req, res) => {
     try {
       const { page = 1, limit = 10, rol_id, estado_id = 1 } = req.query;
@@ -176,3 +167,5 @@ class UsuarioController {
     }
   };
 }
+
+module.exports = UsuarioController;

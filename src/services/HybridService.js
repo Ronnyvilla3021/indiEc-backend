@@ -1,5 +1,5 @@
+// src/services/HybridService.js - VERSIÓN CORREGIDA
 const { sequelize } = require('../config/database.sql');
-const { connectMongoDB } = require('../config/database.orm');
 const mongoose = require('mongoose');
 const logger = require('../config/logger');
 
@@ -8,7 +8,6 @@ class HybridService {
     this.mongoConnection = mongoose.connection;
   }
 
-  // Ejecutar transacción híbrida
   async executeHybridTransaction(mysqlOperations, mongoOperations) {
     const transaction = await sequelize.transaction();
     
@@ -33,9 +32,45 @@ class HybridService {
       // Rollback MySQL
       await transaction.rollback();
       
-      // TODO: Implementar compensación para MongoDB si es necesario
       logger.error('Error en transacción híbrida:', error);
       throw error;
     }
   }
+
+  async executeInTransaction(callback) {
+    const transaction = await sequelize.transaction();
+    try {
+      const result = await callback(transaction);
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
+  async paginar(modelo, opciones = {}) {
+    const { page = 1, limit = 10, where = {}, include = [], order = [['created_at', 'DESC']] } = opciones;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await modelo.findAndCountAll({
+      where,
+      include,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order
+    });
+
+    return {
+      datos: rows,
+      paginacion: {
+        pagina: parseInt(page),
+        limite: parseInt(limit),
+        total: count,
+        paginas: Math.ceil(count / limit)
+      }
+    };
+  }
 }
+
+module.exports = HybridService;

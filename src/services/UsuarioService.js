@@ -1,24 +1,25 @@
+// src/services/UsuarioService.js - VERSIÓN COMPLETA
 const { UsuarioNuevo, Estado, Rol, Sexo, Pais } = require('../models/sql/associations');
-const { hashPassword, comparePassword } = require('../utils/encryption');
+const { hashPassword } = require('../utils/encryption');
+const HybridService = require('./HybridService');
+const mongoose = require('mongoose');
+const logger = require('../config/logger');
 
 class UsuarioService extends HybridService {
   
   async crearUsuario(userData, profileData = {}) {
     return await this.executeHybridTransaction(
       {
-        // Operaciones MySQL
         usuario: async (transaction) => {
-          const hashedPassword = await hashPassword(userData.contraseña);
-          
           return await UsuarioNuevo.create({
             nombre: userData.nombre,
             apellido: userData.apellido,
             correo: userData.correo,
-            contraseña: hashedPassword,
+            contraseña: userData.contraseña, // Se hashea en el hook
             telefono: userData.telefono,
             fecha_nacimiento: userData.fecha_nacimiento,
-            estado_id: userData.estado_id || 1, // Activo por defecto
-            rol_id: userData.rol_id || 4, // Cliente por defecto
+            estado_id: userData.estado_id || 1,
+            rol_id: userData.rol_id || 4,
             sexo_id: userData.sexo_id,
             pais_id: userData.pais_id,
             verificado_email: false,
@@ -27,7 +28,6 @@ class UsuarioService extends HybridService {
         }
       },
       {
-        // Operaciones MongoDB
         perfil: async (mysqlResults) => {
           const usuario = mysqlResults.usuario;
           
@@ -57,7 +57,6 @@ class UsuarioService extends HybridService {
 
   async obtenerUsuarioCompleto(usuarioId) {
     try {
-      // 1. Obtener datos principales de MySQL
       const usuario = await UsuarioNuevo.findByPk(usuarioId, {
         include: [
           { model: Estado, as: 'estado' },
@@ -69,12 +68,11 @@ class UsuarioService extends HybridService {
 
       if (!usuario) return null;
 
-      // 2. Obtener perfil extendido de MongoDB
       const perfil = await mongoose.connection.collection('usuarios_profile')
-        .findOne({ id_usuario: usuarioId });
+        .findOne({ id_usuario: parseInt(usuarioId) });
 
       return {
-        ...usuario.toJSON(),
+        ...usuario.getDatosSeguros(),
         perfil: perfil || {}
       };
     } catch (error) {
@@ -83,10 +81,38 @@ class UsuarioService extends HybridService {
     }
   }
 
+  async buscarUsuarios(query, filtros = {}, opciones = {}) {
+    try {
+      const whereClause = { estado_id: 1 };
+
+      if (query) {
+        whereClause[sequelize.Op.or] = [
+          { nombre: { [sequelize.Op.like]: `%${query}%` } },
+          { apellido: { [sequelize.Op.like]: `%${query}%` } }
+        ];
+      }
+
+      if (filtros.pais_id) whereClause.pais_id = filtros.pais_id;
+      if (filtros.rol_id) whereClause.rol_id = filtros.rol_id;
+
+      return await this.paginar(UsuarioNuevo, {
+        ...opciones,
+        where: whereClause,
+        include: [
+          { model: Estado, as: 'estado' },
+          { model: Rol, as: 'rol' },
+          { model: Pais, as: 'pais' }
+        ]
+      });
+    } catch (error) {
+      logger.error('Error al buscar usuarios:', error);
+      throw error;
+    }
+  }
+
   async actualizarPerfil(usuarioId, datosBasicos = {}, datosExtendidos = {}) {
     return await this.executeHybridTransaction(
       {
-        // Actualizar datos básicos en MySQL
         usuario: async (transaction) => {
           const updateData = {};
           
@@ -107,12 +133,11 @@ class UsuarioService extends HybridService {
         }
       },
       {
-        // Actualizar datos extendidos en MongoDB
         perfil: async () => {
           if (Object.keys(datosExtendidos).length > 0) {
             return await mongoose.connection.collection('usuarios_profile')
               .findOneAndUpdate(
-                { id_usuario: usuarioId },
+                { id_usuario: parseInt(usuarioId) },
                 { 
                   $set: {
                     ...datosExtendidos,
@@ -128,49 +153,21 @@ class UsuarioService extends HybridService {
     );
   }
 
-  async buscarUsuarios(query, filtros = {}, opciones = {}) {
+  async verificarCredenciales(correo, contraseña) {
     try {
-      const { page = 1, limit = 10 } = opciones;
-      const offset = (page - 1) * limit;
-
-      const whereClause = { estado_id: 1 }; // Solo usuarios activos
-
-      // Agregar filtros
-      if (query) {
-        whereClause[sequelize.Op.or] = [
-          { nombre: { [sequelize.Op.like]: `%${query}%` } },
-          { apellido: { [sequelize.Op.like]: `%${query}%` } },
-          { correo: { [sequelize.Op.like]: `%${query}%` } }
-        ];
-      }
-
-      if (filtros.pais_id) whereClause.pais_id = filtros.pais_id;
-      if (filtros.rol_id) whereClause.rol_id = filtros.rol_id;
-
-      const { count, rows } = await UsuarioNuevo.findAndCountAll({
-        where: whereClause,
-        include: [
-          { model: Estado, as: 'estado' },
-          { model: Rol, as: 'rol' },
-          { model: Pais, as: 'pais' }
-        ],
-        limit,
-        offset,
-        order: [['created_at', 'DESC']]
+      const usuario = await UsuarioNuevo.findOne({
+        where: { correo, estado_id: 1 }
       });
 
-      return {
-        usuarios: rows,
-        pagination: {
-          page,
-          limit,
-          total: count,
-          pages: Math.ceil(count / limit)
-        }
-      };
+      if (!usuario) return null;
+
+      const esValida = await usuario.verificarContraseña(contraseña);
+      return esValida ? usuario : null;
     } catch (error) {
-      logger.error('Error al buscar usuarios:', error);
+      logger.error('Error al verificar credenciales:', error);
       throw error;
     }
   }
 }
+
+module.exports = UsuarioService;

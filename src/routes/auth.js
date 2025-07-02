@@ -1,7 +1,7 @@
 // src/routes/auth.js - Rutas de autenticación con encriptación completa
 const express = require("express")
 const jwt = require("jsonwebtoken")
-const User = require("../models/sql/User")
+const User = require("../models/sql/UsuarioNuevo")
 const UserDetails = require("../models/mongo/UserDetails")
 const { hashPassword, comparePassword } = require("../utils/encryption")
 const { validate, schemas } = require("../middleware/validation")

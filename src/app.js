@@ -71,7 +71,7 @@ app.use("/api/events", eventRoutes)
 // ================================
 // RUTAS HÍBRIDAS (Nuevo sistema)
 // ================================
-app.use("/api/v2", rutasHibridas)
+app.use("/api/", rutasHibridas)
 
 // ================================
 // RUTAS DE INFORMACIÓN Y PRUEBAS

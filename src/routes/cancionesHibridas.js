@@ -1,9 +1,21 @@
 const express = require('express');
+const multer = require('multer'); // Import multer
 const { CancionController } = require('../controllers/controladores_faltantes');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 const cancionController = new CancionController();
+
+  // Configure multer for file uploads
+   const storage = multer.diskStorage({
+       destination: (req, file, cb) => {
+           cb(null, 'uploads/'); // Specify the destination folder
+       },
+       filename: (req, file, cb) => {
+           cb(null, Date.now() + '-' + file.originalname); // Specify the filename
+       }
+   });
+   const upload = multer({ storage: storage }); // Create the upload middleware
 
 // Middleware de validación para canciones
 const validarCancion = (req, res, next) => {

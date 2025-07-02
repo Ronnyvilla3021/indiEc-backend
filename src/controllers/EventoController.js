@@ -92,3 +92,5 @@ class EventoController {
     }
   };
 }
+
+module.exports = EventoController;

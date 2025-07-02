@@ -161,3 +161,5 @@ class ArtistaController {
     }
   };
 }
+
+module.exports =  ArtistaController;

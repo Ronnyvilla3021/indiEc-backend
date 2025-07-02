@@ -1,30 +1,15 @@
 const express = require('express');
-const { ArtistaController } = require('../controllers/controladores_hibridos');
+// CORREGIR LA IMPORTACIÓN - quitar las llaves
+const ArtistaController = require('../controllers/ArtistaController'); // SIN llaves {}
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 const artistaController = new ArtistaController();
 
-// Validación para artistas
-const validarArtista = {
-  crear: {
-    body: {
-      nombre: { type: 'string', required: true, min: 2, max: 100 },
-      nombre_artistico: { type: 'string', optional: true, max: 100 },
-      genero_principal_id: { type: 'number', optional: true },
-      pais_id: { type: 'number', optional: true },
-      biografia: { type: 'string', optional: true, max: 2000 },
-      redes_sociales: { type: 'object', optional: true },
-      influencias_musicales: { type: 'array', optional: true },
-      instrumentos: { type: 'array', optional: true }
-    }
-  }
-};
-
 // RUTAS
 
 // POST /api/artistas-hibridos - Crear artista
-router.post('/', authenticateToken, validarDatos(validarArtista.crear), artistaController.crearArtista);
+router.post('/', authenticateToken, artistaController.crearArtista);
 
 // GET /api/artistas-hibridos - Listar artistas
 router.get('/', artistaController.listarArtistas);

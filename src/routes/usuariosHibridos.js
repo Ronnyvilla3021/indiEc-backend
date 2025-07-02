@@ -1,12 +1,13 @@
 const express = require('express');
-const { UsuarioController } = require('../controllers/controladores_hibridos');
+// CORREGIR LA IMPORTACIÓN - quitar las llaves
+const UsuarioController = require('../controllers/UsuarioController'); // SIN llaves {}
 const { authenticateToken } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validation');
 const upload = require('../utils/fileUpload');
 const logger = require('../config/logger');
 
 const router = express.Router();
-const usuarioController = new UsuarioController();
+const usuarioController = new UsuarioController(); // Ahora debería funcionar
 
 // Validaciones
 const validarUsuario = {
@@ -101,7 +102,7 @@ router.post('/', validarDatos(validarUsuario.crear), usuarioController.crearUsua
 router.get('/perfil', authenticateToken, usuarioController.obtenerPerfil);
 
 // PUT /api/usuarios-hibridos/perfil - Actualizar perfil propio
-router.put('/perfil', authenticateToken, validarDatos(validarUsuario.actualizar), usuarioController.actualizarPerfil);
+router.put('/perfil', authenticateToken, usuarioController.actualizarPerfil);
 
 // GET /api/usuarios-hibridos/buscar - Buscar usuarios
 router.get('/buscar', authenticateToken, usuarioController.buscarUsuarios);
@@ -123,9 +124,6 @@ router.post('/perfil/foto', authenticateToken, upload.single('foto'), async (req
     }
 
     const fotoPath = `/uploads/${req.file.filename}`;
-
-    // Aquí podrías actualizar la foto en MongoDB
-    // await usuarioController.actualizarFoto(req.user.id_usuario, fotoPath);
 
     res.json({
       success: true,

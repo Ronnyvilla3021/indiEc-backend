@@ -1,6 +1,6 @@
 const { DataTypes } = require("sequelize")
 const { sequelize } = require("../../config/database.sql")
-const User = require("./User")
+const User = require("./UsuarioNuevo")
 
 const Event = sequelize.define(
   "Event",

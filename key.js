@@ -4,9 +4,9 @@ const config = {
 
     // MySQL
     MYSQL: {
-        HOST: '31.37.42.126',
-        USER: 'linkear',
-        PASSWORD: '0987021692@Rj',
+        HOST: 'localhost',
+        USER: 'root',
+        PASSWORD: '',
         DATABASE: 'indiec'
     },
 

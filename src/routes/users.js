@@ -1,6 +1,6 @@
 // src/routes/users.js - Rutas de usuario actualizadas con encriptación completa
 const express = require("express")
-const User = require("../models/sql/User")
+const User = require("../models/sql/UsuarioNuevo")
 const UserDetails = require("../models/mongo/UserDetails")
 const { authenticateToken } = require("../middleware/auth")
 const { encryptionMiddleware, decryptionMiddleware, encryptMongoData, decryptMongoData } = require("../middleware/encryption")
