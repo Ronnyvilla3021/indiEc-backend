@@ -9,11 +9,11 @@ const eventDetailsSchema = new mongoose.Schema(
     },
     foto: {
       type: String,
-      default: null,
+      default: null, 
     },
     descripcion: {
       type: String,
-      default: null,
+      default: null, 
     },
     ubicacion_detallada: {
       type: String,
